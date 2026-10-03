@@ -1,3 +1,0 @@
-Primeira linha: atenção a primeira linha foi escrita
-Segunda linha: Dados processados com sucesso!Primeira linha: atenção a primeira linha foi escrita
-Segunda linha: Dados processados com sucesso!
