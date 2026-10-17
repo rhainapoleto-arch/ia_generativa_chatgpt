@@ -1,0 +1,8 @@
+# Ambiente Virtual
+venv/
+env/
+.venv/
+__pycache__/
+
+# Configurações Locais
+.env
