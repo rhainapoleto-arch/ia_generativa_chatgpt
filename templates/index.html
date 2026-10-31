@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assistente IA - Base de Conhecimento RAG</title>
+    <link rel="preconnect" href="[https://fonts.googleapis.com](https://fonts.googleapis.com)">
+    <link rel="preconnect" href="[https://fonts.gstatic.com](https://fonts.gstatic.com)" crossorigin>
+    <link
+        href="[https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap](https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap)"
+        rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Barra Lateral: Gerenciamento de PDFs -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2> Documentos PDF</h2>
+                <p>Base de conhecimento ativa</p>
+            </div>
+
+            <!-- Formulário de Upload -->
+            <div class="upload-section">
+                <label for="fileInput" class="upload-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="17 8 12 3 7 8" />
+                        <line x1="12" y1="3" x2="12" y2="15" />
+                    </svg>
+                    Carregar Novo PDF
+                </label>
+                <input type="file" id="fileInput" accept=".pdf" onchange="fazerUploadPDF()" hidden>
+            </div>
+
+            <!-- Lista de Arquivos Cadastrados -->
+            <div class="pdf-list-container">
+                <h3>Arquivos Disponíveis</h3>
+                <ul id="pdfList" class="pdf-list">
+                    <li class="loading-item">Carregando lista...</li>
+                </ul>
+            </div>
+        </aside>
+
+        <!-- Área Principal do Chatbot -->
+        <main class="chat-area">
+            <header class="chat-header">
+                <div class="agent-info">
+                    <div class="status-badge"></div>
+                    <div>
+                        <h1>Agente de IA RAG</h1>
+                        <p class="subtitle">Conectado ao ChromaDB & Azure OpenAI</p>
+                    </div>
+                </div>
+            </header>
+
+            <div class="chat-messages" id="chatMessages">
+                <div class="message bot">
+                    <div class="avatar">🤖</div>
+                    <div class="bubble">
+                        Olá! Sou o seu assistente virtual de inteligência artificial. Como posso ajudar com base nos
+                        documentos cadastrados?
+                    </div>
+                </div>
+            </div>
+
+            <div class="chat-input-area">
+                <input type="text" id="userInput" placeholder="Digite sua pergunta sobre os documentos..."
+                    onkeypress="handleKeyPress(event)">
+                <button onclick="enviarPergunta()" id="btnSend">
+                    <span>Enviar</span>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="22" y1="2" x2="11" y2="13" />
+                        <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                    </svg>
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Carrega a lista de PDFs ao abrir a página
+        document.addEventListener('DOMContentLoaded', carregarPDFs);
+
+        async function carregarPDFs() {
+            const pdfList = document.getElementById('pdfList');
+            try {
+                const res = await fetch('/api/pdfs');
+                const data = await res.json();
+
+                pdfList.innerHTML = '';
+                if (data.arquivos.length === 0) {
+                    pdfList.innerHTML = '<li class="empty-item">Nenhum PDF cadastrado.</li>';
+                    return;
+                }
+
+                data.arquivos.forEach(pdf => {
+                    const li = document.createElement('li');
+                    li.className = 'pdf-item';
+                    li.innerHTML = `
+                        <span class="pdf-name" title="${pdf}">📄 ${pdf}</span>
+                        <button class="btn-delete" onclick="removerPDF('${pdf}')" title="Excluir">🗑️</button>
+                    `;
+                    pdfList.appendChild(li);
+                });
+            } catch (err) {
+                pdfList.innerHTML = '<li class="error-item">Erro ao carregar PDFs.</li>';
+            }
+        }
+
+        async function fazerUploadPDF() {
+            const fileInput = document.getElementById('fileInput');
+            if (!fileInput.files[0]) return;
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                const res = await fetch('/upload', { method: 'POST', body: formData });
+                const data = await res.json();
+                alert(data.mensagem);
+                fileInput.value = '';
+                carregarPDFs();
+            } catch (err) {
+                alert('Erro ao enviar o arquivo.');
+            }
+        }
+
+        async function removerPDF(filename) {
+            if (!confirm(`Deseja remover o arquivo '${filename}'?`)) return;
+
+            try {
+                const res = await fetch(`/remover/${filename}`, { method: 'DELETE' });
+                const data = await res.json();
+                alert(data.mensagem);
+                carregarPDFs();
+            } catch (err) {
+                alert('Erro ao excluir o arquivo.');
+            }
+        }
+
+        async function enviarPergunta() {
+            const input = document.getElementById('userInput');
+            const pergunta = input.value.trim();
+            if (!pergunta) return;
+
+            const chatMessages = document.getElementById('chatMessages');
+
+            // Mensagem do Usuário
+            const userDiv = document.createElement('div');
+            userDiv.className = 'message user';
+            userDiv.innerHTML = `
+                <div class="bubble">${escapeHtml(pergunta)}</div>
+                <div class="avatar">👤</div>
+            `;
+            chatMessages.appendChild(userDiv);
+
+            input.value = '';
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            // Mensagem de Processamento do Bot
+            const botDiv = document.createElement('div');
+            botDiv.className = 'message bot';
+            botDiv.innerHTML = `
+                <div class="avatar">🤖</div>
+                <div class="bubble loading">Consultando base de conhecimento...</div>
+            `;
+            chatMessages.appendChild(botDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            try {
+                const response = await fetch('/perguntar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pergunta: pergunta })
+                });
+                const data = await response.json();
+                botDiv.querySelector('.bubble').classList.remove('loading');
+                botDiv.querySelector('.bubble').textContent = data.resposta;
+            } catch (error) {
+                botDiv.querySelector('.bubble').classList.remove('loading');
+                botDiv.querySelector('.bubble').textContent = 'Erro ao processar a requisição no servidor.';
+            }
+
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') enviarPergunta();
+        }
+
+        function escapeHtml(text) {
+            return text.replace(/[&<>"']/g, function (m) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
+            });
+        }
+    </script>
+</body>
+
+</html>
