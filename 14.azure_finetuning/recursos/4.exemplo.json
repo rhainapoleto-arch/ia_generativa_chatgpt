@@ -1,0 +1,24 @@
+[
+    {
+        "id": 1,
+        "pergunta": "Como configuro o firewall OPNsense?",
+        "categoria": "Infraestrutura",
+        "tags": [
+            "rede",
+            "segurança",
+            "opnsense"
+        ],
+        "ativo": true
+    },
+    {
+        "id": 2,
+        "pergunta": "Qual o comando para criar um venv no Python?",
+        "categoria": "Programação",
+        "tags": [
+            "python",
+            "venv",
+            "desenvolvimento"
+        ],
+        "ativo": true
+    }
+]

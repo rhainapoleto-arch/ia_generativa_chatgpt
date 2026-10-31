@@ -1,0 +1,4 @@
+id,pergunta,categoria,ativo
+1,"Como configuro o firewall OPNsense?","Infraestrutura",true
+2,"Qual o comando para criar um venv no Python?","Programação",true
+3,"Quais são as diretrizes da CPA na FATEC?","Institucional",false
